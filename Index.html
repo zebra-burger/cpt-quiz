@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clarity Practice Quiz</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background-color: #F8F8F5;
+      color: #3E6259;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 { color: #5C6B73; font-size: 2rem; margin-bottom: 1rem; }
+    label { display: block; margin-top: 1.5rem; font-weight: 500; }
+    input[type="range"] { width: 100%; margin-top: 0.5rem; }
+    button {
+      background-color: #A89F68;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 500;
+      margin-top: 2rem;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    button:hover { background-color: #8c8557; }
+  </style>
+</head>
+<body>
+  <h1>Clarity Practice Quiz</h1>
+  <form id="quizForm">
+    <!-- Dynamically insert 12 sliders -->
+    <div id="questions"></div>
+    <button type="submit">Get My Results</button>
+  </form>
+
+  <!-- Results + chart + CTA -->
+  <div id="results" style="display:none; text-align:center; padding-top:2rem;">
+    <canvas id="scoreChart" height="300"></canvas>
+    <div id="ctaA" style="display:none;">
+      <h3 style="color:#3E6259;">You’re a strong fit for coaching</h3>
+      <p style="color:#5C6B73;">We invite you to book a complimentary discovery session.</p>
+      <!-- Embed MailerLite form here -->
+    </div>
+    <div id="ctaB" style="display:none;">
+      <h3 style="color:#3E6259;">You’re doing well</h3>
+      <p style="color:#5C6B73;">Stay sharp — join our insights mailing list.</p>
+      <!-- Embed MailerLite newsletter form here -->
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const questions = [
+        { id: 'q1', text: 'How clear are you on what truly matters most in the next 3 months?', reverse: false },
+        { id: 'q2', text: 'When faced with a complex decision, how confident are you in choosing well?', reverse: false },
+        { id: 'q3', text: 'To what extent does your current work feel aligned with your longer-term vision?', reverse: false },
+        { id: 'q4', text: 'How often do you pause to check in with your state of mind during the day?', reverse: false },
+        { id: 'q5', text: 'When under pressure, how able are you to remain grounded and intentional?', reverse: false },
+        { id: 'q6', text: 'How often do emotions cloud your decision-making or focus?', reverse: true },
+        { id: 'q7', text: 'How energized do you feel at the start of most workdays?', reverse: false },
+        { id: 'q8', text: 'How consistently do you follow through on commitments you make to yourself?', reverse: false },
+        { id: 'q9', text: 'How often do you avoid or delay non-urgent but important work?', reverse: true },
+        { id: 'q10', text: 'How easily do you identify patterns or connections when thinking through problems?', reverse: false },
+        { id: 'q11', text: 'How useful are metaphors, sketches, or spatial thinking in your reflection process?', reverse: false },
+        { id: 'q12', text: 'How willing are you to trust your gut or intuitive insight in decision-making?', reverse: false }
+      ];
+
+      const categories = ['Strategic Clarity', 'Self-Regulation', 'Momentum & Drive', 'Visual Thinking'];
+
+      const container = document.getElementById('questions');
+      questions.forEach((q, i) => {
+        const block = document.createElement('div');
+        block.innerHTML = `<label>${q.text}<input type="range" min="1" max="10" name="${q.id}" required /></label>`;
+        container.appendChild(block);
+      });
+
+      function calculateScores() {
+        const scores = { 'Strategic Clarity': 0, 'Self-Regulation': 0, 'Momentum & Drive': 0, 'Visual Thinking': 0 };
+        questions.forEach((q, i) => {
+          const val = parseInt(document.querySelector(`[name=${q.id}]`).value);
+          const actual = q.reverse ? 10 - val : val;
+          const group = categories[Math.floor(i / 3)];
+          scores[group] += actual;
+        });
+        const avg = Object.values(scores).reduce((a, b) => a + b) / 12;
+        return { scores, average: avg };
+      }
+
+      function displayChart(scores) {
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(scores),
+            datasets: [{
+              label: 'Your Clarity Profile',
+              data: Object.values(scores).map(s => s / 3),
+              backgroundColor: ['#3E6259', '#5C6B73', '#A89F68', '#DCE3DB'],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            scales: {
+              y: { min: 0, max: 10, ticks: { stepSize: 2 } }
+            }
+          }
+        });
+      }
+
+      document.getElementById('quizForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const { scores, average } = calculateScores();
+        document.getElementById('quizForm').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        displayChart(scores);
+
+        if (average >= 7) {
+          document.getElementById('ctaA').style.display = 'block';
+        } else {
+          document.getElementById('ctaB').style.display = 'block';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
