@@ -18,6 +18,7 @@
     h1 { color: #5C6B73; font-size: 2rem; margin-bottom: 1rem; }
     label { display: block; margin-top: 1.5rem; font-weight: 500; }
     input[type="range"] { width: 100%; margin-top: 0.5rem; }
+    .range-value { float: right; font-size: 0.9rem; color: #5C6B73; }
     button {
       background-color: #A89F68;
       color: white;
@@ -31,55 +32,70 @@
       transition: background 0.3s ease;
     }
     button:hover { background-color: #8c8557; }
+    .chart-block { margin-bottom: 2rem; }
+    .interpretation { margin-bottom: 1.5rem; color: #5C6B73; font-size: 0.95rem; }
   </style>
 </head>
 <body>
   <h1>Clarity Practice Quiz</h1>
   <form id="quizForm">
-    <!-- Dynamically insert 12 sliders -->
     <div id="questions"></div>
     <button type="submit">Get My Results</button>
   </form>
 
-  <!-- Results + chart + CTA -->
   <div id="results" style="display:none; text-align:center; padding-top:2rem;">
-    <canvas id="scoreChart" height="300"></canvas>
+    <div class="chart-block">
+      <canvas id="scoreChart" height="300"></canvas>
+      <div class="interpretation" id="interpret1"></div>
+    </div>
+    <div class="chart-block">
+      <canvas id="radarChart" height="300"></canvas>
+      <div class="interpretation" id="interpret2"></div>
+    </div>
+    <div class="chart-block">
+      <canvas id="lineChart" height="300"></canvas>
+      <div class="interpretation" id="interpret3"></div>
+    </div>
+
     <div id="ctaA" style="display:none;">
       <h3 style="color:#3E6259;">You’re a strong fit for coaching</h3>
       <p style="color:#5C6B73;">We invite you to book a complimentary discovery session.</p>
-      <!-- Embed MailerLite form here -->
     </div>
     <div id="ctaB" style="display:none;">
       <h3 style="color:#3E6259;">You’re doing well</h3>
       <p style="color:#5C6B73;">Stay sharp — join our insights mailing list.</p>
-      <!-- Embed MailerLite newsletter form here -->
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const questions = [
-        { id: 'q1', text: 'How clear are you on what truly matters most in the next 3 months?', reverse: false },
-        { id: 'q2', text: 'When faced with a complex decision, how confident are you in choosing well?', reverse: false },
-        { id: 'q3', text: 'To what extent does your current work feel aligned with your longer-term vision?', reverse: false },
-        { id: 'q4', text: 'How often do you pause to check in with your state of mind during the day?', reverse: false },
-        { id: 'q5', text: 'When under pressure, how able are you to remain grounded and intentional?', reverse: false },
-        { id: 'q6', text: 'How often do emotions cloud your decision-making or focus?', reverse: true },
-        { id: 'q7', text: 'How energized do you feel at the start of most workdays?', reverse: false },
-        { id: 'q8', text: 'How consistently do you follow through on commitments you make to yourself?', reverse: false },
-        { id: 'q9', text: 'How often do you avoid or delay non-urgent but important work?', reverse: true },
-        { id: 'q10', text: 'How easily do you identify patterns or connections when thinking through problems?', reverse: false },
-        { id: 'q11', text: 'How useful are metaphors, sketches, or spatial thinking in your reflection process?', reverse: false },
-        { id: 'q12', text: 'How willing are you to trust your gut or intuitive insight in decision-making?', reverse: false }
-      ];
+      const questions = [...Array(12)].map((_, i) => {
+        const baseText = [
+          "How clear are you on what truly matters most in the next 3 months?",
+          "When faced with a complex decision, how confident are you in choosing well?",
+          "To what extent does your current work feel aligned with your longer-term vision?",
+          "How often do you pause to check in with your state of mind during the day?",
+          "When under pressure, how able are you to remain grounded and intentional?",
+          "How often do emotions cloud your decision-making or focus?",
+          "How energized do you feel at the start of most workdays?",
+          "How consistently do you follow through on commitments you make to yourself?",
+          "How often do you avoid or delay non-urgent but important work?",
+          "How easily do you identify patterns or connections when thinking through problems?",
+          "How useful are metaphors, sketches, or spatial thinking in your reflection process?",
+          "How willing are you to trust your gut or intuitive insight in decision-making?"
+        ];
+        const reverse = [false, false, false, false, false, true, false, false, true, false, false, false];
+        return { id: `q${i+1}`, text: baseText[i], reverse: reverse[i] };
+      });
 
       const categories = ['Strategic Clarity', 'Self-Regulation', 'Momentum & Drive', 'Visual Thinking'];
-
       const container = document.getElementById('questions');
       questions.forEach((q, i) => {
-        const block = document.createElement('div');
-        block.innerHTML = `<label>${q.text}<input type="range" min="1" max="10" name="${q.id}" required /></label>`;
-        container.appendChild(block);
+        const group = categories[Math.floor(i / 3)];
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<label>${q.text} <span class="range-value" id="val${q.id}">5</span>
+          <input type="range" min="1" max="10" value="5" name="${q.id}" oninput="document.getElementById('val${q.id}').innerText=this.value" required /></label>`;
+        container.appendChild(wrapper);
       });
 
       function calculateScores() {
@@ -94,25 +110,36 @@
         return { scores, average: avg };
       }
 
-      function displayChart(scores) {
-        const ctx = document.getElementById('scoreChart').getContext('2d');
-        new Chart(ctx, {
+      function displayAllCharts(scores) {
+        const labels = Object.keys(scores);
+        const data = Object.values(scores).map(s => s / 3);
+
+        const chartSettings = {
           type: 'bar',
           data: {
-            labels: Object.keys(scores),
-            datasets: [{
-              label: 'Your Clarity Profile',
-              data: Object.values(scores).map(s => s / 3),
-              backgroundColor: ['#3E6259', '#5C6B73', '#A89F68', '#DCE3DB'],
-              borderRadius: 6
-            }]
+            labels,
+            datasets: [{ label: 'Clarity Score (Bar)', data, backgroundColor: '#A89F68' }]
           },
-          options: {
-            scales: {
-              y: { min: 0, max: 10, ticks: { stepSize: 2 } }
-            }
-          }
+          options: { responsive: true, scales: { y: { min: 0, max: 10 } } }
+        };
+        new Chart(document.getElementById('scoreChart').getContext('2d'), chartSettings);
+
+        new Chart(document.getElementById('radarChart').getContext('2d'), {
+          type: 'radar',
+          data: { labels, datasets: [{ label: 'Clarity Radar', data, backgroundColor: 'rgba(94, 103, 115, 0.3)' }] },
+          options: { responsive: true, scales: { r: { min: 0, max: 10 } } }
         });
+
+        new Chart(document.getElementById('lineChart').getContext('2d'), {
+          type: 'line',
+          data: { labels, datasets: [{ label: 'Clarity Trend', data, fill: false, borderColor: '#3E6259', tension: 0.3 }] },
+          options: { responsive: true, scales: { y: { min: 0, max: 10 } } }
+        });
+
+        // Simple interpretations
+        document.getElementById('interpret1').innerText = 'This bar chart shows your average score across each domain. Aim for consistency over 7.';
+        document.getElementById('interpret2').innerText = 'The radar chart maps balance. Sharp dips signal potential blind spots.';
+        document.getElementById('interpret3').innerText = 'The line chart shows directional flow. Flat or erratic shapes may indicate imbalance or internal tension.';
       }
 
       document.getElementById('quizForm').addEventListener('submit', function (e) {
@@ -120,7 +147,7 @@
         const { scores, average } = calculateScores();
         document.getElementById('quizForm').style.display = 'none';
         document.getElementById('results').style.display = 'block';
-        displayChart(scores);
+        displayAllCharts(scores);
 
         if (average >= 7) {
           document.getElementById('ctaA').style.display = 'block';
